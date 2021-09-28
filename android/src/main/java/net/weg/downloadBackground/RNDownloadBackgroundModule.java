@@ -15,6 +15,7 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.tonyodev.fetch2.Download;
+import com.tonyodev.fetch2core.Downloader;
 import com.tonyodev.fetch2.Error;
 import com.tonyodev.fetch2.Fetch;
 import com.tonyodev.fetch2.FetchConfiguration;
@@ -38,6 +39,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import okhttp3.OkHttpClient;
+import com.tonyodev.fetch2okhttp.OkHttpDownloader;
 
 import javax.annotation.Nullable;
 
@@ -53,6 +57,7 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
   private static final int ERR_NO_WRITE_PERMISSION = 2;
   private static final int ERR_FILE_NOT_FOUND = 3;
   private static final int ERR_OTHERS = 100;
+  private static final Long TIME_OUT = 100_000L;
 
   private static Map<Status, Integer> stateMap = new HashMap<Status, Integer>() {{
     put(Status.DOWNLOADING, TASK_RUNNING);
@@ -80,12 +85,23 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
 
     loadConfigMap();
     FetchConfiguration fetchConfiguration = new FetchConfiguration.Builder(this.getReactApplicationContext())
-            .setFileServerDownloader(new FetchFileServerDownloader(Downloader.FileDownloaderType.PARALLEL, 1200_000))
             .setDownloadConcurrentLimit(4)
+            .setHttpDownloader(getOkHttpDownloader())
             .setNamespace("RNDownloadBackground")
             .build();
     fetch = Fetch.Impl.getInstance(fetchConfiguration);
     fetch.addListener(this);
+  }
+
+  /* Configuration Time Out */
+  private OkHttpDownloader getOkHttpDownloader() {
+    final OkHttpClient okHttpClient = new OkHttpClient.Builder()
+            .readTimeout(TIME_OUT, TimeUnit.MILLISECONDS)
+            .connectTimeout(3000, TimeUnit.MILLISECONDS)
+            .writeTimeout(3000,TimeUnit.MILLISECONDS)
+            .build();
+    return new OkHttpDownloader(okHttpClient,
+            Downloader.FileDownloaderType.PARALLEL);
   }
 
   @Override
@@ -426,4 +442,3 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
   public void onStarted(Download download, List<? extends DownloadBlock> list, int i) {
   }
 }
-
