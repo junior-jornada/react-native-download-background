@@ -80,6 +80,7 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
 
     loadConfigMap();
     FetchConfiguration fetchConfiguration = new FetchConfiguration.Builder(this.getReactApplicationContext())
+            .setFileServerDownloader(new FetchFileServerDownloader(Downloader.FileDownloaderType.PARALLEL, 1200_000))
             .setDownloadConcurrentLimit(4)
             .setNamespace("RNDownloadBackground")
             .build();
