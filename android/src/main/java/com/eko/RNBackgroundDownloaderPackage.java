@@ -1,5 +1,5 @@
 
-package net.weg.downloadBackground;
+package com.eko;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -10,15 +10,10 @@ import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.uimanager.ViewManager;
 import com.facebook.react.bridge.JavaScriptModule;
-public class RNDownloadBackgroundPackage implements ReactPackage {
+public class RNBackgroundDownloaderPackage implements ReactPackage {
     @Override
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
-      return Arrays.<NativeModule>asList(new RNDownloadBackgroundModule(reactContext));
-    }
-
-    // Deprecated from RN 0.47
-    public List<Class<? extends JavaScriptModule>> createJSModules() {
-      return Collections.emptyList();
+      return Arrays.<NativeModule>asList(new RNBackgroundDownloaderModule(reactContext));
     }
 
     @Override

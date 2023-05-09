@@ -1,4 +1,5 @@
-package net.weg.downloadBackground;
+package com.eko;
+
 import java.io.Serializable;
 
 public class RNBGDTaskConfig implements Serializable {
