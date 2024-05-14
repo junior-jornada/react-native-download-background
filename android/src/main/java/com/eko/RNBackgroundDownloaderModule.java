@@ -1,5 +1,4 @@
-
-package net.weg.downloadBackground;
+package com.eko;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
@@ -45,7 +44,7 @@ import com.tonyodev.fetch2okhttp.OkHttpDownloader;
 
 import javax.annotation.Nullable;
 
-public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule implements FetchListener {
+public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule implements FetchListener {
 
   private static final int TASK_RUNNING = 0;
   private static final int TASK_SUSPENDED = 1;
@@ -57,7 +56,7 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
   private static final int ERR_NO_WRITE_PERMISSION = 2;
   private static final int ERR_FILE_NOT_FOUND = 3;
   private static final int ERR_OTHERS = 100;
-  private static final Long TIME_OUT = 100_000L;
+  private static final Long TIME_OUT = 600_000L;
 
   private static Map<Status, Integer> stateMap = new HashMap<Status, Integer>() {{
     put(Status.DOWNLOADING, TASK_RUNNING);
@@ -80,14 +79,14 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
   private HashMap<String, WritableMap> progressReports = new HashMap<>();
   private static Object sharedLock = new Object();
 
-  public RNDownloadBackgroundModule(ReactApplicationContext reactContext) {
+  public RNBackgroundDownloaderModule(ReactApplicationContext reactContext) {
     super(reactContext);
 
     loadConfigMap();
     FetchConfiguration fetchConfiguration = new FetchConfiguration.Builder(this.getReactApplicationContext())
-            .setDownloadConcurrentLimit(4)
+            .setDownloadConcurrentLimit(10)
             .setHttpDownloader(getOkHttpDownloader())
-            .setNamespace("RNDownloadBackground")
+            .setNamespace("RNBackgroundDownloader")
             .build();
     fetch = Fetch.Impl.getInstance(fetchConfiguration);
     fetch.addListener(this);
@@ -101,8 +100,9 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
             .writeTimeout(3000,TimeUnit.MILLISECONDS)
             .build();
     return new OkHttpDownloader(okHttpClient,
-            Downloader.FileDownloaderType.PARALLEL);
+            Downloader.FileDownloaderType.SEQUENTIAL);
   }
+
 
   @Override
   public void onCatalystInstanceDestroy() {
@@ -111,7 +111,7 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
 
   @Override
   public String getName() {
-    return "RNDownloadBackground";
+    return "RNBackgroundDownloader";
   }
 
   @Override
@@ -184,18 +184,18 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
   }
 
   private int convertErrorCode(Error error) {
-    if ((error == Error.FILE_NOT_CREATED)
-            || (error == Error.WRITE_PERMISSION_DENIED)) {
-      return ERR_NO_WRITE_PERMISSION;
-    } else if ((error == Error.CONNECTION_TIMED_OUT)
-            || (error == Error.NO_NETWORK_CONNECTION)) {
-      return ERR_NO_INTERNET;
-    } else if (error == Error.NO_STORAGE_SPACE) {
-      return ERR_STORAGE_FULL;
-    } else if (error == Error.FILE_NOT_FOUND) {
-      return ERR_FILE_NOT_FOUND;
+    if ( error.getHttpResponse() != null) {
+      return error.getHttpResponse().getCode();
     } else {
-      return ERR_OTHERS;
+      return 500;
+    }
+  }
+
+  private String getErrorBackend(Error error) {
+    if ( error.getHttpResponse() != null) {
+      return error.getHttpResponse().getErrorResponse();
+    } else {
+      return "";
     }
   }
 
@@ -238,7 +238,9 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
                 params.putString("error", error.toString());
 
                 int convertedErrCode = convertErrorCode(error);
+                String convertErrResponse = getErrorBackend(error);
                 params.putInt("errorcode", convertedErrCode);
+                params.putString("errorBody", convertErrResponse);
                 ee.emit("downloadFailed", params);
 
                 removeFromMaps(request.getId());
@@ -416,8 +418,10 @@ public class RNDownloadBackgroundModule extends ReactContextBaseJavaModule imple
         WritableMap params = Arguments.createMap();
         params.putString("id", config.id);
 
-        int convertedErrCode = convertErrorCode(error);
-        params.putInt("errorcode", convertedErrCode);
+        int convertErrResponse = convertErrorCode(error);
+        String convertedErrResponse = getErrorBackend(error);
+        params.putInt("errorcode", convertErrResponse);
+        params.putString("errorBody", convertedErrResponse);
 
         if (error == Error.UNKNOWN && throwable != null) {
           params.putString("error", throwable.getLocalizedMessage());

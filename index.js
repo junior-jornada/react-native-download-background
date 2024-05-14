@@ -1,12 +1,12 @@
 import { NativeModules, NativeEventEmitter } from 'react-native';
-const { RNDownloadBackground } = NativeModules;
-const RNDownloadBackgroundEmitter = new NativeEventEmitter(RNDownloadBackground);
+const { RNBackgroundDownloader } = NativeModules;
+const RNBackgroundDownloaderEmitter = new NativeEventEmitter(RNBackgroundDownloader);
 import DownloadTask from './lib/downloadTask';
 
 const tasksMap = new Map();
 let headers = {};
 
-RNDownloadBackgroundEmitter.addListener('downloadProgress', events => {
+RNBackgroundDownloaderEmitter.addListener('downloadProgress', events => {
     for (let event of events) {
         let task = tasksMap.get(event.id);
         if (task) {
@@ -15,7 +15,7 @@ RNDownloadBackgroundEmitter.addListener('downloadProgress', events => {
     }
 });
 
-RNDownloadBackgroundEmitter.addListener('downloadComplete', event => {
+RNBackgroundDownloaderEmitter.addListener('downloadComplete', event => {
     let task = tasksMap.get(event.id);
     if (task) {
         task._onDone(event.location);
@@ -23,16 +23,15 @@ RNDownloadBackgroundEmitter.addListener('downloadComplete', event => {
     tasksMap.delete(event.id);
 });
 
-RNDownloadBackgroundEmitter.addListener('downloadFailed', event => {
-    console.log(event);
+RNBackgroundDownloaderEmitter.addListener('downloadFailed', event => {
     let task = tasksMap.get(event.id);
     if (task) {
-        task._onError(event.error, event.errorcode);
+        task._onError(event, event.errorcode);
     }
     tasksMap.delete(event.id);
 });
 
-RNDownloadBackgroundEmitter.addListener('downloadBegin', event => {
+RNBackgroundDownloaderEmitter.addListener('downloadBegin', event => {
     let task = tasksMap.get(event.id);
     if (task) {
         task._onBegin(event.expectedBytes);
@@ -41,24 +40,24 @@ RNDownloadBackgroundEmitter.addListener('downloadBegin', event => {
 
 export function setHeaders(h = {}) {
     if (typeof h !== 'object') {
-        throw new Error('[RNDownloadBackground] headers must be an object');
+        throw new Error('[RNBackgroundDownloader] headers must be an object');
     }
     headers = h;
 }
 
 export function checkForExistingDownloads() {
-    return RNDownloadBackground.checkForExistingDownloads()
+    return RNBackgroundDownloader.checkForExistingDownloads()
         .then(foundTasks => {
             return foundTasks.map(taskInfo => {
                 let task = new DownloadTask(taskInfo);
-                if (taskInfo.state === RNDownloadBackground.TaskRunning) {
+                if (taskInfo.state === RNBackgroundDownloader.TaskRunning) {
                     task.state = 'DOWNLOADING';
-                } else if (taskInfo.state === RNDownloadBackground.TaskSuspended) {
+                } else if (taskInfo.state === RNBackgroundDownloader.TaskSuspended) {
                     task.state = 'PAUSED';
-                } else if (taskInfo.state === RNDownloadBackground.TaskCanceling) {
+                } else if (taskInfo.state === RNBackgroundDownloader.TaskCanceling) {
                     task.stop();
                     return null;
-                } else if (taskInfo.state === RNDownloadBackground.TaskCompleted) {
+                } else if (taskInfo.state === RNBackgroundDownloader.TaskCompleted) {
                     if (taskInfo.bytesWritten === taskInfo.totalBytes) {
                         task.state = 'DONE';
                     } else {
@@ -74,7 +73,7 @@ export function checkForExistingDownloads() {
 
 export function download(options) {
     if (!options.id || !options.url || !options.destination) {
-        throw new Error('[RNDownloadBackground] id, url and destination are required');
+        throw new Error('[RNBackgroundDownloader] id, url and destination are required');
     }
     if (options.headers && typeof options.headers === 'object') {
         options.headers = {
@@ -84,25 +83,25 @@ export function download(options) {
     } else {
         options.headers = headers;
     }
-    RNDownloadBackground.download(options);
+    RNBackgroundDownloader.download(options);
     let task = new DownloadTask(options.id);
     tasksMap.set(options.id, task);
     return task;
 }
 
 export const directories = {
-    documents: RNDownloadBackground.documents
+    documents: RNBackgroundDownloader.documents
 };
 
 export const Network = {
-    WIFI_ONLY: RNDownloadBackground.OnlyWifi,
-    ALL: RNDownloadBackground.AllNetworks
+    WIFI_ONLY: RNBackgroundDownloader.OnlyWifi,
+    ALL: RNBackgroundDownloader.AllNetworks
 };
 
 export const Priority = {
-    HIGH: RNDownloadBackground.PriorityHigh,
-    MEDIUM: RNDownloadBackground.PriorityNormal,
-    LOW: RNDownloadBackground.PriorityLow
+    HIGH: RNBackgroundDownloader.PriorityHigh,
+    MEDIUM: RNBackgroundDownloader.PriorityNormal,
+    LOW: RNBackgroundDownloader.PriorityLow
 };
 
 export default {
