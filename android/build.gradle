@@ -22,8 +22,8 @@ dependencies {
     //noinspection GradleDynamicVersion
     implementation 'com.facebook.react:react-native:+'
     if (project.properties['android.useAndroidX'] == 'true' || project.properties['android.useAndroidX'] == true) {
-        implementation("com.github.tonyofrancis.Fetch:xfetch2okhttp:3.1.6")
-        api "com.github.tonyofrancis.Fetch:xfetch2:3.1.6"
+        implementation("com.github.Tahir6116162.Fetch:fetch2okhttp:v3.0-SNAPSHOT")
+        api ("com.github.Tahir6116162.Fetch:fetch2:v3.0-SNAPSHOT")
     } else {
         api "com.tonyodev.fetch2:fetch2:3.0.10"
     }
